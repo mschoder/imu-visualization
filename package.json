@@ -9,7 +9,6 @@
   "author": "mschoder",
   "license": "ISC",
   "dependencies": {
-    "ahrs": "file:ahrs",
     "serialport": "^9.0.6",
     "socket.io": "^3.1.0"
   }
