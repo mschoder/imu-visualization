@@ -25,7 +25,7 @@ let cube, plane;
 
 //Connect to socket.io
 const serverIP = "localhost";
-const socket = io.connect(serverIP + ':5000');
+const socket = io.connect(serverIP + ':5004');
 console.log('socket connected to: ' + serverIP);
 
 processData();
@@ -37,7 +37,7 @@ function processData() {
         let dataArray = data.split(", ");
         console.log(dataArray);
 
-        if (dataArray[0].substring(0,3) != 'ypr') {
+        if (dataArray[0].substring(0,3) != 'ypr (deg)') {
             console.log('Cannot parse serial data as number')
         } else {
 

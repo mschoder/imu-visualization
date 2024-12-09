@@ -27,8 +27,8 @@
 #include "MPU9250.h"
 #include "quaternionFilters.h"
 
-#define AHRS true         // Set to false for basic data read
-#define SerialDebug true  // Set to true to get Serial output for debugging
+#define AHRS true          // Set to false for basic data read
+#define SerialDebug false  // Set to true to get Serial output for debugging
 
 // Pin definitions
 int intPin = 12;  // These can be changed, 2 and 3 are the Arduinos ext int pins
@@ -41,14 +41,15 @@ int myLed = 13;   // Set up pin 13 led for toggling
                          // address your device is using
 // #define MPU9250_ADDRESS MPU9250_ADDRESS_AD1
 
-// Places the angle on the interval [0, 360) degrees.
+// Places the angle on the interval (-180, 180] degrees.
 float normalize_angle_deg(float angle) {
-    // Normalize the angle to the range [-360, 360)
+    // Normalize the angle to the range [-360, 360) first
     angle = fmod(angle, 360.0);
-    if (angle < 0.0) {
+    if (angle <= -180.0) {
         angle += 360.0;
+    } else if (angle > 180.0) {
+        angle -= 360.0;
     }
-
     return angle;
 }
 
@@ -322,13 +323,13 @@ void loop() {
         }
 
         // send ypr to serial
-        Serial.print("YPR (deg): [");
-        Serial.print(imu.yaw, 4);
+        Serial.print("ypr: ");
+        Serial.print(imu.yaw, 3);
         Serial.print(", ");
-        Serial.print(imu.pitch, 2);
+        Serial.print(imu.pitch, 3);
         Serial.print(", ");
-        Serial.print(imu.roll, 2);
-        Serial.println("]");
+        Serial.println(imu.roll, 3);
+        // Serial.println("]");
 
         imu.count = millis();
         imu.sumCount = 0;
