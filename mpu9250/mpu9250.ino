@@ -1,16 +1,12 @@
-/* MPU9250 Basic Example Code
- by: Kris Winer
- date: April 1, 2014
- license: Beerware - Use this code however you'd like. If you
- find it useful you can buy me a beer some time.
- Modified by Brent Wilkins July 19, 2016
+/* MPU9250 IMU + Magnetometer (9-axis) 
 
- Demonstrate basic MPU-9250 functionality including parameterizing the register
- addresses, initializing the sensor, getting properly scaled accelerometer,
- gyroscope, and magnetometer data out. Added display functions to allow display
- to on breadboard monitor. Addition of 9 DoF sensor fusion using open source
- Madgwick and Mahony filter algorithms. Sketch runs on the 3.3 V 8 MHz Pro Mini
- and the Teensy 3.1.
+ Simple code for initialization and parsing of raw IMU data from accelerometer,
+ gyroscope, and magnetometer. Send raw data over serial to run filtering offboard,
+ which is not practical in reality, but facilitates lower sample rate testing and 
+ comparison of multiple attitude filtering strategies.
+
+ Code borrows heavily from Kris Winer's MPU-9250 arduino sketches and filter
+ implementation: https://github.com/kriswiner/MPU9250
 
  SDA and SCL should have external pull-up resistors (to 3.3V).
  10k resistors are on the EMSENSR-9250 breakout board.
@@ -25,10 +21,11 @@
  */
 
 #include "MPU9250.h"
-#include "quaternionFilters.h"
 
-#define AHRS true          // Set to false for basic data read
 #define SerialDebug false  // Set to true to get Serial output for debugging
+#define OUTPUT_INTERVAL_MS \
+    4  // Defines interval (rate) at which to write to serial (ms)
+const uint8_t HEADER[] = {0xAA, 0xFF};  // Define a 2-byte header
 
 // Pin definitions
 int intPin = 12;  // These can be changed, 2 and 3 are the Arduinos ext int pins
@@ -41,17 +38,14 @@ int myLed = 13;   // Set up pin 13 led for toggling
                          // address your device is using
 // #define MPU9250_ADDRESS MPU9250_ADDRESS_AD1
 
-// Places the angle on the interval (-180, 180] degrees.
-float normalize_angle_deg(float angle) {
-    // Normalize the angle to the range [-360, 360) first
-    angle = fmod(angle, 360.0);
-    if (angle <= -180.0) {
-        angle += 360.0;
-    } else if (angle > 180.0) {
-        angle -= 360.0;
-    }
-    return angle;
-}
+// For writing data as bytes to serial
+struct ImuState {
+    float ax, ay, az;
+    float gx, gy, gz;
+    float mx, my, mz;
+};
+
+ImuState imu_state;
 
 MPU9250 imu(MPU9250_ADDRESS, I2Cport, I2Cclock);
 
@@ -145,20 +139,37 @@ void setup() {
         imu.getGres();
         imu.getMres();
 
-        // The next call delays for 4 seconds, and then records about 15 seconds
-        // of data to calculate bias and scale.
-        //    myIMU.magCalMPU9250(myIMU.magBias, myIMU.magScale);
-        Serial.println("AK8963 mag biases (mG)");
-        Serial.println(imu.magBias[0]);
-        Serial.println(imu.magBias[1]);
-        Serial.println(imu.magBias[2]);
+        // The following block is output from a recent calibration, using this as hardcoded calibration for now. 
+        // Uncomment the calibration call below to run that instead.
+        //
+        // AK8963 mag biases (mG)
+        // -320.81
+        // -245.54
+        // -6.91
+        // AK8963 mag scale (mG)
+        // 1.27
+        // 0.73
+        // 1.19
+        imu.magBias[0] = -320.81;
+        imu.magBias[1] = -245.54;
+        imu.magBias[2] = -6.91;
+        imu.magScale[0] = 1.27;
+        imu.magScale[1] = 0.73;
+        imu.magScale[2] = 1.19;
 
-        Serial.println("AK8963 mag scale (mG)");
-        Serial.println(imu.magScale[0]);
-        Serial.println(imu.magScale[1]);
-        Serial.println(imu.magScale[2]);
-        //    delay(2000); // Add delay to see results before serial spew of
-        //    data
+        // // The next call delays for 4 seconds, and then records about 15 seconds
+        // // of data to calculate bias and scale.
+        // imu.magCalMPU9250(imu.magBias, imu.magScale);
+        // Serial.println("AK8963 mag biases (mG)");
+        // Serial.println(imu.magBias[0]);
+        // Serial.println(imu.magBias[1]);
+        // Serial.println(imu.magBias[2]);
+
+        // Serial.println("AK8963 mag scale (mG)");
+        // Serial.println(imu.magScale[0]);
+        // Serial.println(imu.magScale[1]);
+        // Serial.println(imu.magScale[2]);
+        // delay(2000); // Add delay to see results before serial spew of data
 
         if (SerialDebug) {
             Serial.println("Magnetometer:");
@@ -188,26 +199,23 @@ void loop() {
     if (imu.readByte(MPU9250_ADDRESS, INT_STATUS) & 0x01) {
         imu.readAccelData(imu.accelCount);  // Read the x/y/z adc values
 
-        // Now we'll calculate the accleration value into actual g's
-        // This depends on scale being set
-        imu.ax = (float)imu.accelCount[0] * imu.aRes;  // - myIMU.accelBias[0];
-        imu.ay = (float)imu.accelCount[1] * imu.aRes;  // - myIMU.accelBias[1];
-        imu.az = (float)imu.accelCount[2] * imu.aRes;  // - myIMU.accelBias[2];
+        // Read acceleration in milli-Gs
+        imu.ax = (float)imu.accelCount[0] * imu.aRes;
+        imu.ay = (float)imu.accelCount[1] * imu.aRes;
+        imu.az = (float)imu.accelCount[2] * imu.aRes;
 
         imu.readGyroData(imu.gyroCount);  // Read the x/y/z adc values
 
-        // Calculate the gyro value into actual degrees per second
-        // This depends on scale being set
+        // Read gyro data in deg/s
         imu.gx = (float)imu.gyroCount[0] * imu.gRes;
         imu.gy = (float)imu.gyroCount[1] * imu.gRes;
         imu.gz = (float)imu.gyroCount[2] * imu.gRes;
 
         imu.readMagData(imu.magCount);  // Read the x/y/z adc values
 
-        // Calculate the magnetometer values in milliGauss
+        // Read magnetometer values in milliGauss
         // Include factory calibration per data sheet and user environmental
         // corrections
-        // Get actual magnetometer value, this depends on scale being set
         imu.mx =
             (float)imu.magCount[0] * imu.mRes * imu.factoryMagCalibration[0] -
             imu.magBias[0];
@@ -230,109 +238,67 @@ void loop() {
     // forward along the x-axis just like in the LSM9DS0 sensor. This rotation
     // can be modified to allow any convenient orientation convention. This is
     // ok by aircraft orientation standards! Pass gyro rate as rad/s
-    MadgwickQuaternionUpdate(-imu.ay, -imu.ax, imu.az, imu.gy * DEG_TO_RAD,
-                             imu.gx * DEG_TO_RAD, -imu.gz * DEG_TO_RAD, imu.my,
-                             imu.mx, imu.mz, imu.deltat);
+    // MadgwickQuaternionUpdate(-imu.ay, -imu.ax, imu.az, imu.gy * DEG_TO_RAD,
+    //                          imu.gx * DEG_TO_RAD, -imu.gz * DEG_TO_RAD,
+    //                          imu.my, imu.mx, imu.mz, imu.deltat);
 
-    // Serial print and/or display at 0.5 s rate independent of data rates
     imu.delt_t = millis() - imu.count;
 
-    // update serial output once per 500ms independent of read rate
-    if (imu.delt_t > 500) {
-        if (SerialDebug) {
-            // Accelerometer uses RFU coordinates, so we convert to NED
+    // update serial output once per interval independent of read rate
+    if (imu.delt_t > OUTPUT_INTERVAL_MS) {
+        // Accelerometer uses RFU coordinates, so we convert to NED
+        imu_state.ax = (int)1000 * -imu.ay;
+        imu_state.ay = (int)1000 * -imu.ax;
+        imu_state.az = (int)1000 * imu.az;
+
+        // Gyroscope uses RFU coordinates, so we need to convert to NED
+        imu_state.gx = imu.gy;
+        imu_state.gy = imu.gx;
+        imu_state.gz = -imu.gz;
+
+        // Magnetometer uses NED coordinates, so no change needed
+        imu_state.mx = imu.mx;
+        imu_state.my = imu.my;
+        imu_state.mz = imu.mz;
+
+        // Write the output to serial; first header, then struct as raw bytes
+        Serial.write(HEADER, sizeof(HEADER));
+        Serial.write((uint8_t*)&imu_state, sizeof(ImuState));
+
+        if (imu.delt_t > 500 && (SerialDebug)) {
             Serial.print("[ax, ay, az] (mg) = [");
-            Serial.print((int)1000 * -imu.ay);
+            Serial.print(imu_state.ax, 2);
             Serial.print(", ");
-            Serial.print((int)1000 * -imu.ax);
+            Serial.print(imu_state.ay, 2);
             Serial.print(", ");
-            Serial.print((int)1000 * imu.az);
+            Serial.print(imu_state.az, 2);
             Serial.println("]");
 
-            // Gyroscope uses RFU coordinates, so we need to convert to NED
             Serial.print("[gx, gy, gz] (deg/s) = [");
-            Serial.print(imu.gy, 2);
+            Serial.print(imu_state.gy, 2);
             Serial.print(", ");
-            Serial.print(imu.gx, 2);
+            Serial.print(imu_state.gx, 2);
             Serial.print(", ");
-            Serial.print(-imu.gz, 2);
+            Serial.print(imu_state.gz, 2);
             Serial.println("]");
 
             Serial.print("[mx, my, mz] (mG) = [");
-            Serial.print((int)imu.mx);
+            Serial.print(imu_state.mx);
             Serial.print(", = ");
-            Serial.print((int)imu.my);
+            Serial.print(imu_state.my);
             Serial.print(", = ");
-            Serial.print((int)imu.mz);
+            Serial.print(imu_state.mz);
             Serial.println("]");
 
-            // Serial.print("q0 = ");
-            // Serial.print(*getQ());
-            // Serial.print(" qx = ");
-            // Serial.print(*(getQ() + 1));
-            // Serial.print(" qy = ");
-            // Serial.print(*(getQ() + 2));
-            // Serial.print(" qz = ");
-            // Serial.println(*(getQ() + 3));
-        }
-
-        // Define output variables from updated quaternion---these are
-        // Tait-Bryan angles, commonly used in aircraft orientation. In this
-        // coordinate system, the positive z-axis is down toward Earth. Yaw
-        // is the angle between Sensor x-axis and Earth magnetic North (or
-        // true North if corrected for local declination, looking down on
-        // the sensor positive yaw is counterclockwise. Pitch is angle
-        // between sensor x-axis and Earth ground plane, toward the Earth is
-        // positive, up toward the sky is negative. Roll is angle between
-        // sensor y-axis and Earth ground plane, y-axis up is positive roll.
-        // These arise from the definition of the homogeneous rotation
-        // matrix constructed from quaternions. Tait-Bryan angles as well as
-        // Euler angles are non-commutative; that is, the get the correct
-        // orientation the rotations must be applied in the correct order
-        // which for this configuration is yaw, pitch, and then roll. For
-        // more see
-        // http://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
-        // which has additional links.
-        imu.yaw = atan2(
-            2.0f * (*(getQ() + 1) * *(getQ() + 2) + *getQ() * *(getQ() + 3)),
-            *getQ() * *getQ() + *(getQ() + 1) * *(getQ() + 1) -
-                *(getQ() + 2) * *(getQ() + 2) - *(getQ() + 3) * *(getQ() + 3));
-        imu.pitch = -asin(
-            2.0f * (*(getQ() + 1) * *(getQ() + 3) - *getQ() * *(getQ() + 2)));
-        imu.roll = atan2(
-            2.0f * (*getQ() * *(getQ() + 1) + *(getQ() + 2) * *(getQ() + 3)),
-            *getQ() * *getQ() - *(getQ() + 1) * *(getQ() + 1) -
-                *(getQ() + 2) * *(getQ() + 2) + *(getQ() + 3) * *(getQ() + 3));
-        imu.yaw *= RAD_TO_DEG;
-        imu.pitch *= RAD_TO_DEG;
-        imu.roll *= RAD_TO_DEG;
-
-        // Apply declination correction
-        // Ref: http://www.ngdc.noaa.gov/geomag-web/#declination
-        imu.yaw -= 13.25;  // san francisco: 37° 46' 37"N, 122° 25' 10"W
-
-        // Normalize
-        imu.yaw = normalize_angle_deg(imu.yaw);
-        imu.pitch = normalize_angle_deg(imu.pitch);
-        imu.roll = normalize_angle_deg(imu.roll);
-
-        if (SerialDebug) {
+            // Monitor loop rate
             Serial.print("rate = ");
             Serial.print((float)imu.sumCount / imu.sum, 2);
             Serial.println(" Hz");
-        }
+        }  // if (imu.delt_t > 500 && (SerialDebug))
 
-        // send ypr to serial
-        Serial.print("ypr: ");
-        Serial.print(imu.yaw, 3);
-        Serial.print(", ");
-        Serial.print(imu.pitch, 3);
-        Serial.print(", ");
-        Serial.println(imu.roll, 3);
-        // Serial.println("]");
-
+        // Timer book-keeping
         imu.count = millis();
         imu.sumCount = 0;
         imu.sum = 0;
-    }  // if (imu.delt_t > 500)
+    }  // if (imu.delt_t > OUTPUT_INTERVAL_MS)
 }
