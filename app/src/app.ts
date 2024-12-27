@@ -1,7 +1,60 @@
 import * as THREE from 'three';
-// import { EulerAngles } from '../eulerAngles';
 import { parseAttitudeEstimates } from '../attitudeEstimates';
 import "./styles.css";
+import { Euler, Quaternion } from 'three';
+
+// Function to convert quaternion to Euler angles in degrees
+const quaternionToEulerAngles = (q: Quaternion) => {
+    const euler = new Euler().setFromQuaternion(q, 'XYZ');
+    return {
+        x: THREE.MathUtils.radToDeg(euler.x),
+        y: THREE.MathUtils.radToDeg(euler.y),
+        z: THREE.MathUtils.radToDeg(euler.z)
+    };
+};
+
+// Table for displaying Euler angles
+const eulerAngleTable = document.createElement('table');
+eulerAngleTable.innerHTML = `
+    <thead>
+        <tr>
+            <th>Roll(X)</th>
+            <th>Pitch(Y)</th>
+            <th>Yaw(Z)</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr id="accel-mag-row">
+            <td id="accel-mag-roll">0</td>
+            <td id="accel-mag-pitch">0</td>
+            <td id="accel-mag-yaw">0</td>
+        </tr>
+        <tr id="complementary-row">
+            <td id="complementary-roll">0</td>
+            <td id="complementary-pitch">0</td>
+            <td id="complementary-yaw">0</td>
+        </tr>
+        <tr id="ekf-row">
+            <td id="ekf-roll">0</td>
+            <td id="ekf-pitch">0</td>
+            <td id="ekf-yaw">0</td>
+        </tr>
+        <tr id="madgwick-row">
+            <td id="madgwick-roll">0</td>
+            <td id="madgwick-pitch">0</td>
+            <td id="madgwick-yaw">0</td>
+        </tr>
+    </tbody>
+`;
+document.body.appendChild(eulerAngleTable);
+
+// Update table with Euler angles
+const updateTable = (idPrefix: string, quaternion: Quaternion) => {
+    const angles = quaternionToEulerAngles(quaternion);
+    document.getElementById(`${idPrefix}-roll`)!.textContent = angles.x.toFixed(2);
+    document.getElementById(`${idPrefix}-pitch`)!.textContent = angles.y.toFixed(2);
+    document.getElementById(`${idPrefix}-yaw`)!.textContent = angles.z.toFixed(2);
+};
 
 // Set up the scene, camera, and renderer
 //
@@ -46,6 +99,7 @@ scene.add(cube2);
 scene.add(cube3);
 scene.add(cube4);
 
+// Visualize global axes
 var globalAxesHelper = new THREE.AxesHelper(0.5);
 globalAxesHelper.position.set(6, 2, 2);
 scene.add(globalAxesHelper);
@@ -90,6 +144,32 @@ socket.onmessage = event => {
     }
 };
 
+socket.onmessage = event => {
+    try {
+        const estimates = parseAttitudeEstimates(JSON.parse(event.data));
+
+        if (estimates.accel_mag) {
+            cube1.quaternion.copy(estimates.accel_mag);
+            updateTable('accel-mag', estimates.accel_mag);
+        }
+        if (estimates.complementary) {
+            cube2.quaternion.copy(estimates.complementary);
+            updateTable('complementary', estimates.complementary);
+        }
+        if (estimates.ekf) {
+            cube3.quaternion.copy(estimates.ekf);
+            updateTable('ekf', estimates.ekf);
+        }
+        if (estimates.madgwick) {
+            cube4.quaternion.copy(estimates.madgwick);
+            updateTable('madgwick', estimates.madgwick);
+        }
+
+    } catch (err) {
+        console.error("Invalid data received:", event.data);
+    }
+};
+
 // Get the cube toggle elements
 const cube1Toggle = document.getElementById("cube1-toggle") as HTMLInputElement;
 const cube2Toggle = document.getElementById("cube2-toggle") as HTMLInputElement;
@@ -112,4 +192,11 @@ cube3Toggle?.addEventListener("change", (event: Event) => {
 cube4Toggle?.addEventListener("change", (event: Event) => {
     const target = event.target as HTMLInputElement;
     cube4.visible = target.checked;
+});
+
+// Handle window resize
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
 });

@@ -7,11 +7,35 @@ canvas {
     display: block;
 }
 
+table {
+    position: absolute;
+    top: 23px;
+    left: 260px;
+    color: white;
+    font-size: 14px;
+    font-family: 'Inconsolata', monospace;
+    border-collapse: collapse;
+}
+
+table tr {
+    height: 30px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+table td {
+    padding: 16px 50px;
+    font-size: 14px;
+}
+
 #controls {
     position: absolute;
-    top: 10px;
+    top: 5px;
     left: 10px;
     color: white;
+    text-align: center;
+    font-family: 'Inconsolata', monospace;
+    font-size: 18px;
 }
 
 .toggle-container {
@@ -61,8 +85,8 @@ input[type="checkbox"]:checked+.slider::before {
     /* Move the circle to the right when on */
 }
 
-/* Optional: Styling for the labels */
 label {
-    font-size: 18px;
+    font-family: 'Inconsolata', monospace;
+    font-size: 14px;
     font-weight: bold;
 }
