@@ -1,3 +1,7 @@
+.DS_Store
+.vscode/
+*/target/*
+
 # Logs
 logs
 *.log
@@ -104,4 +108,12 @@ dist
 .tern-port
 
 
-node_modules/
+node_modules/# Devenv
+.devenv*
+devenv.local.nix
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
