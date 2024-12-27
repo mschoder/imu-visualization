@@ -1,0 +1,68 @@
+body {
+    margin: 0;
+    overflow: hidden;
+}
+
+canvas {
+    display: block;
+}
+
+#controls {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: white;
+}
+
+.toggle-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+input[type="checkbox"] {
+    opacity: 0;
+    /* Hide the actual checkbox */
+    position: absolute;
+    left: -9999px;
+}
+
+.slider {
+    position: relative;
+    width: 50px;
+    height: 25px;
+    background-color: #ccc;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.slider::before {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background-color: white;
+    transition: 0.2s;
+}
+
+/* When checkbox is checked (slider active) */
+input[type="checkbox"]:checked+.slider {
+    background-color: #4CAF50;
+    /* Green when on */
+}
+
+input[type="checkbox"]:checked+.slider::before {
+    transform: translateX(25px);
+    /* Move the circle to the right when on */
+}
+
+/* Optional: Styling for the labels */
+label {
+    font-size: 18px;
+    font-weight: bold;
+}
