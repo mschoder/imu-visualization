@@ -8,8 +8,8 @@
     "start": "webpack server",
     "build": "webpack"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Mike Schoder",
+  "license": "MIT",
   "dependencies": {
     "three": "^0.171.0",
     "ws": "^8.18.0"
