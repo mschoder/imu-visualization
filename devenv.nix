@@ -22,11 +22,6 @@
   };
   languages.typescript.enable = true;
 
-  # git-hooks.hooks = {
-  #   rustfmt.enable = true;
-  #   clippy.enable = true;
-  # };
-
   packages = lib.optionals pkgs.stdenv.isDarwin (
     with pkgs.darwin.apple_sdk;
     [
