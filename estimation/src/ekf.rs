@@ -16,8 +16,8 @@ pub struct Ekf {
     /// Estimated covariance matrix (after measurement correction)
     P: Matrix4<f32>,
     /// Sensor noise variances. Making the strong assumption here that noise is uniform
-    /// across each axis and isotropic. 
-    var_w: f32, 
+    /// across each axis and isotropic.
+    var_w: f32,
     var_a: f32,
     var_m: f32,
     // Magnetic field reference at the desired location
@@ -102,9 +102,6 @@ impl Ekf {
 
         // Compute Kalman gain
         let K = P_hat * H.transpose() * S.pseudo_inverse(1e-6).unwrap();
-
-        dbg!(&v);
-        dbg!(&K);
 
         // Final updates to state and covariance matrix
         let q = (quat_to_vec4(&q_hat) + K * v).normalize();

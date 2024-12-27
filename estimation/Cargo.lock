@@ -266,6 +266,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "estimation"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "csv",
+ "futures-util",
+ "nalgebra",
+ "num-traits",
+ "serde",
+ "serde_json",
+ "serialport",
+ "tokio",
+ "tokio-serial",
+ "tokio-tungstenite",
+]
+
+[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -409,24 +427,6 @@ name = "httparse"
 version = "1.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7d71d3574edd2771538b901e6549113b4006ece66150fb69c0fb6d9a2adae946"
-
-[[package]]
-name = "imu-filters"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "csv",
- "futures-util",
- "nalgebra",
- "num-traits",
- "serde",
- "serde_json",
- "serialport",
- "tokio",
- "tokio-serial",
- "tokio-tungstenite",
-]
 
 [[package]]
 name = "io-kit-sys"
