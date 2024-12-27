@@ -8,7 +8,7 @@ Implementation and visualization of various fused sensor AHRS / orientation esti
 
 This is a toy project where estimation / filtering is done at lower rate (~200Hz) on a laptop rather than on the microcontroller connected directly to the IMU, which facilitated ease of debugging and introspection, comparisons of multiple estimators, and visualization.
 
-![app-ui](viz/app_ui.png)
+![app-ui](assets/app_ui.png)
 
 ## Quickstart
 

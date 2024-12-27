@@ -22,7 +22,7 @@
 
 #include "MPU9250.h"
 
-#define SerialDebug false  // Set to true to get Serial output for debugging
+#define SerialDebug true  // Set to true to get Serial output for debugging
 #define OUTPUT_INTERVAL_MS \
     4  // Defines interval (rate) at which to write to serial (ms)
 const uint8_t HEADER[] = {0xAA, 0xFF};  // Define a 2-byte header
@@ -157,6 +157,23 @@ void setup() {
         imu.magScale[1] = 0.73;
         imu.magScale[2] = 1.19;
 
+        
+        // 13:01:52.773 -> Mag Calibration: Wave device in a figure 8 until done!
+        // 13:01:52.773 ->   4 seconds to get ready followed by 15 seconds of sampling)
+        // 13:02:14.124 -> Mag Calibration done!
+        // 13:02:14.124 -> AK8963 mag biases (mG)
+        // 13:02:14.124 -> -345.90
+        // 13:02:14.124 -> -200.73
+        // 13:02:14.124 -> -214.25
+        // 13:02:14.124 -> AK8963 mag scale (mG)
+        // 13:02:14.124 -> 1.10
+        // 13:02:14.125 -> 0.94
+        // 13:02:14.125 -> 0.97
+        // 13:02:16.131 -> Magnetometer:
+        // 13:02:16.131 -> X-Axis sensitivity adjustment value 1.20
+        // 13:02:16.131 -> Y-Axis sensitivity adjustment value 1.20
+        // 13:02:16.131 -> Z-Axis sensitivity adjustment value 1.15
+
         // // The next call delays for 4 seconds, and then records about 15 seconds
         // // of data to calculate bias and scale.
         // imu.magCalMPU9250(imu.magBias, imu.magScale);
@@ -265,36 +282,36 @@ void loop() {
         Serial.write(HEADER, sizeof(HEADER));
         Serial.write((uint8_t*)&imu_state, sizeof(ImuState));
 
-        if (imu.delt_t > 500 && (SerialDebug)) {
-            Serial.print("[ax, ay, az] (mg) = [");
-            Serial.print(imu_state.ax, 2);
-            Serial.print(", ");
-            Serial.print(imu_state.ay, 2);
-            Serial.print(", ");
-            Serial.print(imu_state.az, 2);
-            Serial.println("]");
+        // if (imu.delt_t > 500 && (SerialDebug)) {
+        //     Serial.print("[ax, ay, az] (mg) = [");
+        //     Serial.print(imu_state.ax, 2);
+        //     Serial.print(", ");
+        //     Serial.print(imu_state.ay, 2);
+        //     Serial.print(", ");
+        //     Serial.print(imu_state.az, 2);
+        //     Serial.println("]");
 
-            Serial.print("[gx, gy, gz] (deg/s) = [");
-            Serial.print(imu_state.gy, 2);
-            Serial.print(", ");
-            Serial.print(imu_state.gx, 2);
-            Serial.print(", ");
-            Serial.print(imu_state.gz, 2);
-            Serial.println("]");
+        //     Serial.print("[gx, gy, gz] (deg/s) = [");
+        //     Serial.print(imu_state.gy, 2);
+        //     Serial.print(", ");
+        //     Serial.print(imu_state.gx, 2);
+        //     Serial.print(", ");
+        //     Serial.print(imu_state.gz, 2);
+        //     Serial.println("]");
 
-            Serial.print("[mx, my, mz] (mG) = [");
-            Serial.print(imu_state.mx);
-            Serial.print(", = ");
-            Serial.print(imu_state.my);
-            Serial.print(", = ");
-            Serial.print(imu_state.mz);
-            Serial.println("]");
+        //     Serial.print("[mx, my, mz] (mG) = [");
+        //     Serial.print(imu_state.mx);
+        //     Serial.print(", = ");
+        //     Serial.print(imu_state.my);
+        //     Serial.print(", = ");
+        //     Serial.print(imu_state.mz);
+        //     Serial.println("]");
 
-            // Monitor loop rate
-            Serial.print("rate = ");
-            Serial.print((float)imu.sumCount / imu.sum, 2);
-            Serial.println(" Hz");
-        }  // if (imu.delt_t > 500 && (SerialDebug))
+        //     // Monitor loop rate
+        //     Serial.print("rate = ");
+        //     Serial.print((float)imu.sumCount / imu.sum, 2);
+        //     Serial.println(" Hz");
+        // }  // if (imu.delt_t > 500 && (SerialDebug))
 
         // Timer book-keeping
         imu.count = millis();
